@@ -231,7 +231,7 @@ export default function App() {
       const bList = await fetchBoards();
       setBoards(bList);
       const allTasks = [];
-      const toScan = bList.slice(0, 10);
+      const toScan = bList;
       for (let i = 0; i < toScan.length; i++) {
         const b = toScan[i];
         setLoadingMsg(`Scanning board ${i + 1} of ${toScan.length}: ${b.name.slice(0, 30)}…`);

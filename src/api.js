@@ -19,14 +19,22 @@ export async function fetchMe() {
 }
 
 export async function fetchBoards() {
-  const data = await gql(`
-    query {
-      boards(limit: 50, state: active) {
-        id name url state workspace { id name }
+  const all = [];
+  let page = 1;
+  while (true) {
+    const data = await gql(`
+      query {
+        boards(limit: 50, page: ${page}, state: active) {
+          id name url state workspace { id name }
+        }
       }
-    }
-  `);
-  return data.boards || [];
+    `);
+    const boards = data.boards || [];
+    all.push(...boards);
+    if (boards.length < 50) break;
+    page++;
+  }
+  return all;
 }
 
 export async function fetchMyItems(boardId, boardName) {
