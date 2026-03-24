@@ -23,14 +23,10 @@ export async function fetchBoards() {
     query {
       boards(limit: 50, state: active) {
         id name url state workspace { id name }
-        subscribers { id }
       }
     }
   `);
-  // Use == (not ===) because API may return numeric IDs
-  return (data.boards || []).filter((b) =>
-    b.subscribers?.some((s) => s.id == MY_USER_ID)
-  );
+  return data.boards || [];
 }
 
 export async function fetchMyItems(boardId, boardName) {
