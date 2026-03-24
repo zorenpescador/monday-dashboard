@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchBoards, fetchTasksFromBoard } from "./api.js";
+import { fetchBoards, fetchMyItems } from "./api.js";
 import "./App.css";
 
 const STATUS_COLORS = {
@@ -83,9 +83,9 @@ export default function App() {
       const toScan = bList.slice(0, 10);
       for (let i = 0; i < toScan.length; i++) {
         const b = toScan[i];
-        setLoadingMsg(`Scanning board ${i + 1} of ${toScan.length}: ${b.title.slice(0, 30)}…`);
+        setLoadingMsg(`Scanning board ${i + 1} of ${toScan.length}: ${b.name.slice(0, 30)}…`);
         try {
-          const t = await fetchTasksFromBoard(b.id, b.title);
+          const t = await fetchMyItems(b.id, b.name);
           allTasks.push(...t);
           setTasks([...allTasks]);
         } catch {}
@@ -224,14 +224,14 @@ export default function App() {
             ) : (
               <div className="board-list">
                 {boards.map((b, i) => {
-                  const taskCount = byBoard[b.title] || 0;
+                  const taskCount = byBoard[b.name] || 0;
                   const expanded = expandedBoards[b.id];
-                  const boardTasks = tasks.filter((t) => t.boardTitle === b.title);
+                  const boardTasks = tasks.filter((t) => t.boardTitle === b.name);
                   return (
                     <div key={b.id || i} className="board-card">
                       <div className="board-header" onClick={() => setExpandedBoards((p) => ({ ...p, [b.id]: !p[b.id] }))}>
                         <span className="board-chevron" style={{ transform: expanded ? "rotate(90deg)" : "none" }}>▶</span>
-                        <span className="board-title">{b.title}</span>
+                        <span className="board-title">{b.name}</span>
                         <div className="board-actions">
                           {taskCount > 0 && <span className="board-badge">{taskCount} task{taskCount !== 1 ? "s" : ""}</span>}
                           {b.url && (
