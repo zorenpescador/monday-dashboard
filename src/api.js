@@ -21,7 +21,7 @@ export async function fetchMe() {
 export async function fetchBoards() {
   const data = await gql(`
     query {
-      boards(limit: 50, order_by: last_activity) {
+      boards(limit: 50) {
         id name url state
       }
     }
