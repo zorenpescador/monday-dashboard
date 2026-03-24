@@ -19,13 +19,16 @@ User ID is 75120898. User name is Zoren Pescador.`,
     }),
   });
 
+  const data = await res.json().catch(() => null);
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Request failed: ${res.status}`);
+    const msg = typeof data?.error === "string"
+      ? data.error
+      : data?.error?.message || data?.message || `Request failed: ${res.status}`;
+    throw new Error(msg);
   }
 
-  const data = await res.json();
-  return data.content || [];
+  return data?.content || [];
 }
 
 export async function fetchBoards() {
