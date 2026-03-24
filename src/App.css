@@ -349,6 +349,16 @@
   text-overflow: ellipsis;
 }
 
+.workspace-group { margin-bottom: 24px; }
+.workspace-heading {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin: 0 0 8px 0;
+}
+
 /* Responsive */
 @media (max-width: 520px) {
   .stats-grid { grid-template-columns: repeat(3, 1fr); }

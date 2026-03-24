@@ -223,42 +223,54 @@ export default function App() {
               </div>
             ) : (
               <div className="board-list">
-                {boards.map((b, i) => {
-                  const taskCount = byBoard[b.name] || 0;
-                  const expanded = expandedBoards[b.id];
-                  const boardTasks = tasks.filter((t) => t.boardTitle === b.name);
-                  return (
-                    <div key={b.id || i} className="board-card">
-                      <div className="board-header" onClick={() => setExpandedBoards((p) => ({ ...p, [b.id]: !p[b.id] }))}>
-                        <span className="board-chevron" style={{ transform: expanded ? "rotate(90deg)" : "none" }}>▶</span>
-                        <span className="board-title">{b.name}</span>
-                        <div className="board-actions">
-                          {taskCount > 0 && <span className="board-badge">{taskCount} task{taskCount !== 1 ? "s" : ""}</span>}
-                          {b.url && (
-                            <a href={b.url} onClick={(e) => e.stopPropagation()} className="board-link" target="_blank" rel="noopener noreferrer">
-                              Open ↗
-                            </a>
+                {Object.entries(
+                  boards.reduce((acc, b) => {
+                    const ws = b.workspace?.name || "My Workspace";
+                    if (!acc[ws]) acc[ws] = [];
+                    acc[ws].push(b);
+                    return acc;
+                  }, {})
+                ).map(([workspace, wsBoards]) => (
+                  <div key={workspace} className="workspace-group">
+                    <h3 className="workspace-heading">{workspace}</h3>
+                    {wsBoards.map((b, i) => {
+                      const taskCount = byBoard[b.name] || 0;
+                      const expanded = expandedBoards[b.id];
+                      const boardTasks = tasks.filter((t) => t.boardTitle === b.name);
+                      return (
+                        <div key={b.id || i} className="board-card">
+                          <div className="board-header" onClick={() => setExpandedBoards((p) => ({ ...p, [b.id]: !p[b.id] }))}>
+                            <span className="board-chevron" style={{ transform: expanded ? "rotate(90deg)" : "none" }}>▶</span>
+                            <span className="board-title">{b.name}</span>
+                            <div className="board-actions">
+                              {taskCount > 0 && <span className="board-badge">{taskCount} task{taskCount !== 1 ? "s" : ""}</span>}
+                              {b.url && (
+                                <a href={b.url} onClick={(e) => e.stopPropagation()} className="board-link" target="_blank" rel="noopener noreferrer">
+                                  Open ↗
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          {expanded && (
+                            <div className="board-tasks">
+                              {boardTasks.length === 0 ? (
+                                <p className="board-empty">No tasks assigned to you in this board.</p>
+                              ) : (
+                                boardTasks.map((t, j) => (
+                                  <div key={t.id || j} className="board-task-row" style={{ borderBottom: j < boardTasks.length - 1 ? "0.5px solid #e5e7eb" : "none" }}>
+                                    <div className="task-dot-sm" style={{ background: getStatusStyle(t.status).dot }} />
+                                    <span className="board-task-name">{t.name}</span>
+                                    <StatusBadge label={t.status} />
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           )}
                         </div>
-                      </div>
-                      {expanded && (
-                        <div className="board-tasks">
-                          {boardTasks.length === 0 ? (
-                            <p className="board-empty">No tasks assigned to you in this board.</p>
-                          ) : (
-                            boardTasks.map((t, j) => (
-                              <div key={t.id || j} className="board-task-row" style={{ borderBottom: j < boardTasks.length - 1 ? "0.5px solid #e5e7eb" : "none" }}>
-                                <div className="task-dot-sm" style={{ background: getStatusStyle(t.status).dot }} />
-                                <span className="board-task-name">{t.name}</span>
-                                <StatusBadge label={t.status} />
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             )}
           </>

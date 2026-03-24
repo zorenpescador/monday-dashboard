@@ -21,8 +21,8 @@ export async function fetchMe() {
 export async function fetchBoards() {
   const data = await gql(`
     query {
-      boards(limit: 50) {
-        id name url state
+      boards(limit: 50, mine: true) {
+        id name url state workspace { id name }
       }
     }
   `);
