@@ -242,6 +242,10 @@
   font-size: 11px;
   color: #888;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 /* Status Badge */
@@ -359,9 +363,227 @@
   margin: 0 0 8px 0;
 }
 
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #e2e4e9;
+  background: #fff;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.btn-icon:hover { background: #f0f1f3; }
+
+/* Task badges */
+.task-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.task-item { cursor: pointer; }
+
+/* Due Labels */
+.due-label {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+  background: #f1efe8;
+  color: #5f5e5a;
+}
+.due-overdue { background: #fcebeb; color: #a32d2d; }
+.due-today   { background: #e6f1fb; color: #185fa5; }
+.due-soon    { background: #faeeda; color: #854f0b; }
+
+/* Today's Focus */
+.focus-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fffdf5;
+  border: 1px solid #f0e4b0;
+  border-radius: 10px;
+}
+.focus-heading {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #854f0b;
+  margin: 0 0 12px;
+}
+.task-item-focus { border-color: #f0e4b0; }
+
+/* Task Detail Panel */
+.panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+.panel {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  height: 100%;
+  overflow-y: auto;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #eaecf0;
+}
+.panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f1f1f;
+  margin: 0;
+  line-height: 1.4;
+}
+.panel-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #888;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.panel-close:hover { background: #f0f1f3; color: #333; }
+.panel-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.panel-row { display: flex; align-items: center; gap: 10px; }
+.panel-field { font-size: 12px; color: #888; width: 90px; flex-shrink: 0; }
+.panel-val { font-size: 13px; color: #1f1f1f; }
+.panel-empty { font-size: 13px; color: #aaa; }
+.panel-open-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 16px;
+  background: #378add;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  margin-top: 4px;
+}
+.panel-open-btn:hover { background: #2d6fba; }
+.panel-updates { margin-top: 8px; }
+.panel-updates-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin: 0 0 10px;
+}
+.panel-update-item {
+  padding: 10px 0;
+  border-top: 1px solid #f0f1f3;
+}
+.panel-update-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.panel-update-time { color: #aaa; }
+.panel-update-text { font-size: 13px; color: #333; margin: 0; line-height: 1.5; }
+
+/* Updates Feed */
+.updates-feed { display: flex; flex-direction: column; gap: 8px; }
+.update-item {
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.update-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.update-meta { display: flex; flex-direction: column; gap: 1px; }
+.update-author { font-size: 13px; font-weight: 500; color: #1f1f1f; }
+.update-time { font-size: 11px; color: #aaa; }
+.update-text { font-size: 13px; color: #333; margin: 0 0 8px; line-height: 1.5; }
+.update-task-ref { font-size: 11px; color: #aaa; }
+.update-task-link { color: #378add; text-decoration: none; font-size: 11px; }
+.update-task-link:hover { text-decoration: underline; }
+
+/* Dark Mode */
+body.dark { background: #111318; }
+.dark.app { background: #111318; }
+.dark .container { color: #e1e3e8; }
+.dark .header h1 { color: #e1e3e8; }
+.dark .subtitle { color: #6b7280; }
+.dark .btn-refresh,
+.dark .btn-icon { background: #1e2028; border-color: #2e3140; color: #bbb; }
+.dark .btn-refresh:hover,
+.dark .btn-icon:hover { background: #262933; }
+.dark .stat-card,
+.dark .task-item,
+.dark .board-card,
+.dark .update-item,
+.dark .panel { background: #1e2028; border-color: #2e3140; }
+.dark .stat-label { color: #6b7280; }
+.dark .task-name,
+.dark .board-title,
+.dark .panel-title,
+.dark .panel-val,
+.dark .update-author { color: #e1e3e8; }
+.dark .task-meta,
+.dark .board-empty,
+.dark .spinner-wrap p { color: #6b7280; }
+.dark .board-task-name,
+.dark .update-text,
+.dark .panel-update-text { color: #bbb; }
+.dark .tabs { border-color: #2e3140; }
+.dark .tab { color: #6b7280; }
+.dark .tab:hover { color: #aaa; }
+.dark .filter-input,
+.dark .filter-select {
+  background: #1e2028;
+  border-color: #2e3140;
+  color: #e1e3e8;
+}
+.dark .board-tasks { background: #181b23; border-color: #2e3140; }
+.dark .board-header:hover { background: #262933; }
+.dark .board-task-row { border-color: #2e3140 !important; }
+.dark .focus-section { background: #1e1a0e; border-color: #3d320a; }
+.dark .workspace-heading,
+.dark .panel-field,
+.dark .panel-updates-title { color: #6b7280; }
+.dark .panel-update-item { border-color: #2e3140; }
+.dark .panel-close:hover { background: #262933; color: #e1e3e8; }
+.dark .panel-overlay { background: rgba(0,0,0,0.5); }
+
 /* Responsive */
 @media (max-width: 520px) {
   .stats-grid { grid-template-columns: repeat(3, 1fr); }
   .filters { flex-direction: column; }
   .filter-select { max-width: 100%; }
+  .panel { max-width: 100%; }
+  .task-badges { flex-direction: column; align-items: flex-end; gap: 3px; }
 }

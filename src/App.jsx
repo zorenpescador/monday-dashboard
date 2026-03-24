@@ -11,11 +11,73 @@ const STATUS_COLORS = {
   "Review":        { bg: "#fbeaf0", text: "#993556", dot: "#d4537e" },
 };
 
+const PRIORITY_COLORS = {
+  "Critical": { bg: "#fcebeb", text: "#a32d2d", dot: "#e24b4a" },
+  "High":     { bg: "#faeeda", text: "#854f0b", dot: "#ef9f27" },
+  "Medium":   { bg: "#e6f1fb", text: "#185fa5", dot: "#378add" },
+  "Low":      { bg: "#f1efe8", text: "#5f5e5a", dot: "#888780" },
+};
+
 function getStatusStyle(status) {
   const key = Object.keys(STATUS_COLORS).find((k) =>
     status?.toLowerCase().includes(k.toLowerCase())
   );
   return STATUS_COLORS[key] || STATUS_COLORS["Not Started"];
+}
+
+function getPriorityStyle(priority) {
+  const key = Object.keys(PRIORITY_COLORS).find((k) =>
+    priority?.toLowerCase().includes(k.toLowerCase())
+  );
+  return PRIORITY_COLORS[key] || { bg: "#f1efe8", text: "#5f5e5a", dot: "#888780" };
+}
+
+function getDueStatus(dueDate) {
+  if (!dueDate) return null;
+  const due = new Date(dueDate);
+  if (isNaN(due)) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  const diff = Math.round((due - today) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return "overdue";
+  if (diff === 0) return "today";
+  if (diff <= 3) return "soon";
+  return null;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatRelative(isoStr) {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  const diff = Math.floor((Date.now() - d) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function sortTasks(tasks, sort) {
+  const arr = [...tasks];
+  if (sort === "dueDate") {
+    arr.sort((a, b) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    });
+  } else if (sort === "status") {
+    arr.sort((a, b) => (a.status || "zzz").localeCompare(b.status || "zzz"));
+  } else if (sort === "board") {
+    arr.sort((a, b) => (a.boardTitle || "").localeCompare(b.boardTitle || ""));
+  }
+  return arr;
 }
 
 function StatusBadge({ label }) {
@@ -26,6 +88,27 @@ function StatusBadge({ label }) {
       {label || "No status"}
     </span>
   );
+}
+
+function PriorityBadge({ label }) {
+  if (!label) return null;
+  const s = getPriorityStyle(label);
+  return (
+    <span className="status-badge" style={{ background: s.bg, color: s.text }}>
+      <span className="status-dot" style={{ background: s.dot }} />
+      {label}
+    </span>
+  );
+}
+
+function DueLabel({ dueDate }) {
+  if (!dueDate) return null;
+  const status = getDueStatus(dueDate);
+  const formatted = formatDate(dueDate);
+  if (status === "overdue") return <span className="due-label due-overdue">Overdue · {formatted}</span>;
+  if (status === "today")   return <span className="due-label due-today">Due today</span>;
+  if (status === "soon")    return <span className="due-label due-soon">Due {formatted}</span>;
+  return <span className="due-label">Due {formatted}</span>;
 }
 
 function Avatar({ name, size = 32 }) {
@@ -57,6 +140,67 @@ function StatCard({ label, value, color }) {
   );
 }
 
+function TaskDetailPanel({ task, onClose }) {
+  if (!task) return null;
+  return (
+    <div className="panel-overlay" onClick={onClose}>
+      <div className="panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-header">
+          <h2 className="panel-title">{task.name}</h2>
+          <button className="panel-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="panel-body">
+          <div className="panel-row">
+            <span className="panel-field">Board</span>
+            <span className="panel-val">{task.boardTitle}</span>
+          </div>
+          <div className="panel-row">
+            <span className="panel-field">Status</span>
+            <StatusBadge label={task.status} />
+          </div>
+          {task.priority && (
+            <div className="panel-row">
+              <span className="panel-field">Priority</span>
+              <PriorityBadge label={task.priority} />
+            </div>
+          )}
+          <div className="panel-row">
+            <span className="panel-field">Due date</span>
+            {task.dueDate
+              ? <DueLabel dueDate={task.dueDate} />
+              : <span className="panel-empty">No due date</span>}
+          </div>
+          {task.updatedAt && (
+            <div className="panel-row">
+              <span className="panel-field">Last updated</span>
+              <span className="panel-val">{formatRelative(task.updatedAt)}</span>
+            </div>
+          )}
+          {task.url && (
+            <a href={task.url} target="_blank" rel="noopener noreferrer" className="panel-open-btn">
+              Open in monday.com ↗
+            </a>
+          )}
+          {task.updates?.length > 0 && (
+            <div className="panel-updates">
+              <h3 className="panel-updates-title">Recent updates</h3>
+              {task.updates.map((u) => (
+                <div key={u.id} className="panel-update-item">
+                  <div className="panel-update-meta">
+                    <strong>{u.creator?.name}</strong>
+                    <span className="panel-update-time">{formatRelative(u.created_at)}</span>
+                  </div>
+                  <p className="panel-update-text">{u.text_body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [boards, setBoards] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -67,7 +211,15 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [boardFilter, setBoardFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("dueDate");
   const [expandedBoards, setExpandedBoards] = useState({});
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", darkMode);
+    localStorage.setItem("darkMode", darkMode);
+  }, [darkMode]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,7 +230,6 @@ export default function App() {
       setLoadingMsg("Fetching boards…");
       const bList = await fetchBoards();
       setBoards(bList);
-
       const allTasks = [];
       const toScan = bList.slice(0, 10);
       for (let i = 0; i < toScan.length; i++) {
@@ -102,11 +253,19 @@ export default function App() {
   const statuses = ["all", ...Array.from(new Set(tasks.map((t) => t.status).filter(Boolean)))];
   const boardNames = ["all", ...Array.from(new Set(tasks.map((t) => t.boardTitle).filter(Boolean)))];
 
-  const filtered = tasks.filter((t) => {
-    const matchStatus = statusFilter === "all" || t.status === statusFilter;
-    const matchBoard = boardFilter === "all" || t.boardTitle === boardFilter;
-    const matchSearch = !search || t.name?.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchBoard && matchSearch;
+  const filtered = sortTasks(
+    tasks.filter((t) => {
+      const matchStatus = statusFilter === "all" || t.status === statusFilter;
+      const matchBoard = boardFilter === "all" || t.boardTitle === boardFilter;
+      const matchSearch = !search || t.name?.toLowerCase().includes(search.toLowerCase());
+      return matchStatus && matchBoard && matchSearch;
+    }),
+    sort
+  );
+
+  const todayTasks = tasks.filter((t) => {
+    const s = getDueStatus(t.dueDate);
+    return s === "today" || s === "overdue";
   });
 
   const byStatus = tasks.reduce((acc, t) => {
@@ -120,8 +279,13 @@ export default function App() {
     return acc;
   }, {});
 
+  const allUpdates = tasks
+    .flatMap((t) => (t.updates || []).map((u) => ({ ...u, taskName: t.name, boardTitle: t.boardTitle, taskUrl: t.url })))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 30);
+
   return (
-    <div className="app">
+    <div className={`app${darkMode ? " dark" : ""}`}>
       <div className="container">
 
         {/* Header */}
@@ -133,10 +297,15 @@ export default function App() {
               <p className="subtitle">Zoren Pescador · SEO Specialist</p>
             </div>
           </div>
-          <button className="btn-refresh" onClick={load} disabled={loading}>
-            <span style={{ display: "inline-block", animation: loading ? "spin 0.8s linear infinite" : "none" }}>↺</span>
-            {loading ? "Loading…" : "Refresh"}
-          </button>
+          <div className="header-actions">
+            <button className="btn-icon" onClick={() => setDarkMode((d) => !d)} title="Toggle dark mode">
+              {darkMode ? "☀" : "☾"}
+            </button>
+            <button className="btn-refresh" onClick={load} disabled={loading}>
+              <span style={{ display: "inline-block", animation: loading ? "spin 0.8s linear infinite" : "none" }}>↺</span>
+              {loading ? "Loading…" : "Refresh"}
+            </button>
+          </div>
         </header>
 
         {/* Error Banner */}
@@ -153,13 +322,36 @@ export default function App() {
           </div>
         )}
 
+        {/* Today's Focus */}
+        {!loading && todayTasks.length > 0 && activeTab === "tasks" && (
+          <div className="focus-section">
+            <h3 className="focus-heading">Today's Focus</h3>
+            <div className="task-list">
+              {todayTasks.map((task, i) => (
+                <div key={task.id || i} className="task-item task-item-focus" onClick={() => setSelectedTask(task)}>
+                  <div className="task-dot" style={{ borderColor: getStatusStyle(task.status).dot }} />
+                  <div className="task-info">
+                    <p className="task-name">{task.name}</p>
+                    <p className="task-meta">{task.boardTitle}</p>
+                  </div>
+                  <div className="task-badges">
+                    <DueLabel dueDate={task.dueDate} />
+                    <StatusBadge label={task.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="tabs">
-          {["tasks", "boards"].map((t) => (
+          {["tasks", "boards", "updates"].map((t) => (
             <button key={t} className={`tab ${activeTab === t ? "tab-active" : ""}`} onClick={() => setActiveTab(t)}>
-              {t === "tasks" ? "My Tasks" : "My Boards"}
+              {t === "tasks" ? "My Tasks" : t === "boards" ? "My Boards" : "Updates"}
               {t === "tasks" && tasks.length > 0 && <span className="tab-count">{tasks.length}</span>}
               {t === "boards" && boards.length > 0 && <span className="tab-count">{boards.length}</span>}
+              {t === "updates" && allUpdates.length > 0 && <span className="tab-count">{allUpdates.length}</span>}
             </button>
           ))}
         </div>
@@ -182,6 +374,12 @@ export default function App() {
                   <option key={b} value={b}>{b === "all" ? "All boards" : b.length > 30 ? b.slice(0, 30) + "…" : b}</option>
                 ))}
               </select>
+              <select className="filter-select" value={sort} onChange={(e) => setSort(e.target.value)}>
+                <option value="dueDate">Sort: Due date</option>
+                <option value="status">Sort: Status</option>
+                <option value="board">Sort: Board</option>
+                <option value="none">Sort: Default</option>
+              </select>
             </div>
 
             {loading ? (
@@ -194,16 +392,19 @@ export default function App() {
             ) : (
               <div className="task-list">
                 {filtered.map((task, i) => (
-                  <div key={task.id || i} className="task-item">
+                  <div key={task.id || i} className="task-item" onClick={() => setSelectedTask(task)}>
                     <div className="task-dot" style={{ borderColor: getStatusStyle(task.status).dot }} />
                     <div className="task-info">
                       <p className="task-name">{task.name}</p>
-                      <p className="task-meta">
-                        {task.boardTitle}
-                        {task.dueDate ? ` · Due ${task.dueDate}` : ""}
-                      </p>
+                      <div className="task-meta">
+                        <span>{task.boardTitle}</span>
+                        {task.dueDate && <DueLabel dueDate={task.dueDate} />}
+                      </div>
                     </div>
-                    <StatusBadge label={task.status} />
+                    <div className="task-badges">
+                      {task.priority && <PriorityBadge label={task.priority} />}
+                      <StatusBadge label={task.status} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -218,7 +419,7 @@ export default function App() {
               <Spinner message={loadingMsg} />
             ) : boards.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">📋</div>
+                <div className="empty-icon">☰</div>
                 <p>No boards found.</p>
               </div>
             ) : (
@@ -257,7 +458,7 @@ export default function App() {
                                 <p className="board-empty">No tasks assigned to you in this board.</p>
                               ) : (
                                 boardTasks.map((t, j) => (
-                                  <div key={t.id || j} className="board-task-row" style={{ borderBottom: j < boardTasks.length - 1 ? "0.5px solid #e5e7eb" : "none" }}>
+                                  <div key={t.id || j} className="board-task-row" onClick={() => setSelectedTask(t)} style={{ borderBottom: j < boardTasks.length - 1 ? "0.5px solid #e5e7eb" : "none" }}>
                                     <div className="task-dot-sm" style={{ background: getStatusStyle(t.status).dot }} />
                                     <span className="board-task-name">{t.name}</span>
                                     <StatusBadge label={t.status} />
@@ -276,7 +477,47 @@ export default function App() {
           </>
         )}
 
+        {/* Updates Tab */}
+        {activeTab === "updates" && (
+          <>
+            {loading ? (
+              <Spinner message={loadingMsg} />
+            ) : allUpdates.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">☁</div>
+                <p>No recent updates found.</p>
+              </div>
+            ) : (
+              <div className="updates-feed">
+                {allUpdates.map((u, i) => (
+                  <div key={u.id || i} className="update-item">
+                    <div className="update-header">
+                      <Avatar name={u.creator?.name} size={28} />
+                      <div className="update-meta">
+                        <span className="update-author">{u.creator?.name}</span>
+                        <span className="update-time">{formatRelative(u.created_at)}</span>
+                      </div>
+                    </div>
+                    <p className="update-text">{u.text_body}</p>
+                    <div className="update-task-ref">
+                      {u.taskUrl ? (
+                        <a href={u.taskUrl} target="_blank" rel="noopener noreferrer" className="update-task-link">
+                          {u.taskName} · {u.boardTitle}
+                        </a>
+                      ) : (
+                        <span>{u.taskName} · {u.boardTitle}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
       </div>
+
+      <TaskDetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
     </div>
   );
 }

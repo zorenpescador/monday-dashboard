@@ -43,6 +43,7 @@ export async function fetchMyItems(boardId, boardName) {
           items {
             id name url updated_at
             column_values { id text type }
+            updates(limit: 3) { id text_body created_at creator { name } }
           }
         }
       }
@@ -51,16 +52,24 @@ export async function fetchMyItems(boardId, boardName) {
   const board = data?.boards?.[0];
   if (!board) return [];
   return (board.items_page?.items || []).map((item) => {
-    const statusCol = item.column_values?.find((c) => c.type === "color");
+    const statusCol = item.column_values?.find(
+      (c) => c.type === "color" && !c.id?.toLowerCase().includes("priority")
+    );
+    const priorityCol = item.column_values?.find(
+      (c) => c.type === "color" && c.id?.toLowerCase().includes("priority")
+    );
     const dateCol = item.column_values?.find((c) => c.type === "date");
     return {
       id: item.id,
       name: item.name,
       url: item.url,
+      updatedAt: item.updated_at,
       status: statusCol?.text || null,
+      priority: priorityCol?.text || null,
       dueDate: dateCol?.text || null,
       boardId: board.id,
       boardTitle: boardName || board.name,
+      updates: item.updates || [],
     };
   });
 }
