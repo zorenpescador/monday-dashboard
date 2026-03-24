@@ -1,82 +1,63 @@
-const MCP_SERVER = {
-  type: "url",
-  url: "https://mcp.monday.com/mcp",
-  name: "monday-mcp",
-};
+const MY_USER_ID = "75120898";
 
-async function callClaude(prompt) {
-  const res = await fetch("/api/claude", {
+async function gql(query) {
+  const res = await fetch("/api/monday", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      system: `You are a monday.com assistant. Use the monday.com MCP tools to fetch data.
-Always respond with ONLY valid JSON (no markdown, no backticks, no preamble).
-User ID is 75120898. User name is Zoren Pescador.`,
-      messages: [{ role: "user", content: prompt }],
-      mcp_servers: [MCP_SERVER],
-    }),
+    body: JSON.stringify({ query }),
   });
-
-  const data = await res.json().catch(() => null);
-
-  if (!res.ok) {
-    const msg = typeof data?.error === "string"
-      ? data.error
-      : data?.error?.message || data?.message || `Request failed: ${res.status}`;
-    throw new Error(msg);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed: ${res.status}`);
   }
+  return data.data;
+}
 
-  return data?.content || [];
+export async function fetchMe() {
+  const data = await gql(`query { me { id name title } }`);
+  return data.me;
 }
 
 export async function fetchBoards() {
-  const raw = await callClaude(
-    `Use the monday.com search tool to find all boards. 
-     Return a JSON array of objects with fields: id (number only, no prefix), title, url. 
-     Return ONLY the JSON array, nothing else.`
-  );
-
-  for (const block of raw) {
-    if (block.type === "text") {
-      const match = block.text?.trim().match(/\[[\s\S]*\]/);
-      if (match) {
-        try { return JSON.parse(match[0]); } catch {}
+  const data = await gql(`
+    query {
+      boards(limit: 50, order_by: last_activity) {
+        id name url state
       }
     }
-    if (block.type === "mcp_tool_result") {
-      try {
-        const d = JSON.parse(block.content?.[0]?.text || "{}");
-        if (d.data) {
-          return d.data.map((b) => ({
-            id: parseInt(b.id?.replace("board-", "")),
-            title: b.title,
-            url: b.url,
-          }));
-        }
-      } catch {}
-    }
-  }
-  return [];
+  `);
+  return (data.boards || []).filter((b) => b.state === "active");
 }
 
-export async function fetchTasksFromBoard(boardId, boardTitle) {
-  const raw = await callClaude(
-    `Use get_board_items_page for board ID ${boardId} with includeColumns=true and limit=100.
-     Find items where the person/assignee column includes user ID 75120898 (Zoren Pescador).
-     Return ONLY a JSON array of objects: { id, name, status, dueDate, boardTitle, boardId }.
-     boardTitle should be "${boardTitle}". boardId should be ${boardId}.
-     If no items are assigned to this user, return an empty array [].`
-  );
-
-  for (const block of raw) {
-    if (block.type === "text") {
-      const match = block.text?.trim().match(/\[[\s\S]*\]/);
-      if (match) {
-        try { return JSON.parse(match[0]); } catch {}
+export async function fetchMyItems(boardId, boardName) {
+  const data = await gql(`
+    query {
+      boards(ids: [${boardId}]) {
+        id name
+        items_page(limit: 100, query_params: {
+          rules: [{ column_id: "person", compare_value: ["${MY_USER_ID}"], operator: any_of }]
+        }) {
+          items {
+            id name url updated_at
+            column_values { id text type }
+          }
+        }
       }
     }
-  }
-  return [];
+  `);
+  const board = data?.boards?.[0];
+  if (!board) return [];
+  return (board.items_page?.items || []).map((item) => {
+    const statusCol = item.column_values?.find((c) => c.type === "color");
+    const dateCol = item.column_values?.find((c) => c.type === "date");
+    return {
+      id: item.id,
+      name: item.name,
+      url: item.url,
+      status: statusCol?.text || null,
+      dueDate: dateCol?.text || null,
+      boardId: board.id,
+      boardTitle: boardName || board.name,
+    };
+  });
 }
