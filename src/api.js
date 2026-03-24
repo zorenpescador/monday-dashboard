@@ -21,12 +21,15 @@ export async function fetchMe() {
 export async function fetchBoards() {
   const data = await gql(`
     query {
-      boards(limit: 50, mine: true) {
+      boards(limit: 50, state: active) {
         id name url state workspace { id name }
+        subscribers { id }
       }
     }
   `);
-  return (data.boards || []).filter((b) => b.state === "active");
+  return (data.boards || []).filter((b) =>
+    b.subscribers?.some((s) => s.id === MY_USER_ID)
+  );
 }
 
 export async function fetchMyItems(boardId, boardName) {
@@ -35,7 +38,7 @@ export async function fetchMyItems(boardId, boardName) {
       boards(ids: [${boardId}]) {
         id name
         items_page(limit: 100, query_params: {
-          rules: [{ column_id: "person", compare_value: ["${MY_USER_ID}"], operator: any_of }]
+          rules: [{ column_id: "person", compare_value: ["person-${MY_USER_ID}"], operator: any_of }]
         }) {
           items {
             id name url updated_at
