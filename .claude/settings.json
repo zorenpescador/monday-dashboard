@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:developer.monday.com)",
+      "mcp__claude_ai_monday_com__get_graphql_schema",
+      "mcp__claude_ai_monday_com__get_type_details",
+      "mcp__claude_ai_monday_com__all_monday_api",
+      "mcp__claude_ai_monday_com__get_user_context",
+      "mcp__claude_ai_monday_com__get_board_info"
+    ]
+  }
+}

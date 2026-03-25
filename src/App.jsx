@@ -201,6 +201,90 @@ function TaskDetailPanel({ task, onClose }) {
   );
 }
 
+function loadSavedBoardIds() {
+  try { return new Set(JSON.parse(localStorage.getItem("selectedBoardIds") || "null") || []); }
+  catch { return new Set(); }
+}
+
+function BoardPicker({ allBoards, selectedIds, onApply, onClose }) {
+  const [draft, setDraft] = useState(new Set(selectedIds));
+  const [search, setSearch] = useState("");
+
+  const grouped = allBoards
+    .filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
+    .reduce((acc, b) => {
+      const ws = b.workspace?.name || "My Workspace";
+      if (!acc[ws]) acc[ws] = [];
+      acc[ws].push(b);
+      return acc;
+    }, {});
+
+  const toggle = (id) => setDraft((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const toggleWorkspace = (wsBoards) => {
+    const allSelected = wsBoards.every((b) => draft.has(b.id));
+    setDraft((prev) => {
+      const next = new Set(prev);
+      wsBoards.forEach((b) => allSelected ? next.delete(b.id) : next.add(b.id));
+      return next;
+    });
+  };
+
+  return (
+    <div className="panel-overlay" onClick={onClose}>
+      <div className="panel picker-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-header">
+          <h2 className="panel-title">Select Boards to Track</h2>
+          <button className="panel-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="picker-search-wrap">
+          <input
+            className="filter-input"
+            placeholder="Search boards…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          <div className="picker-quick">
+            <button className="picker-quick-btn" onClick={() => setDraft(new Set(allBoards.map((b) => b.id)))}>All</button>
+            <button className="picker-quick-btn" onClick={() => setDraft(new Set())}>None</button>
+          </div>
+        </div>
+        <div className="picker-body">
+          {Object.entries(grouped).map(([ws, wsBoards]) => {
+            const allSelected = wsBoards.every((b) => draft.has(b.id));
+            return (
+              <div key={ws} className="picker-workspace">
+                <div className="picker-ws-header" onClick={() => toggleWorkspace(wsBoards)}>
+                  <input type="checkbox" checked={allSelected} onChange={() => toggleWorkspace(wsBoards)} onClick={(e) => e.stopPropagation()} />
+                  <span className="picker-ws-name">{ws}</span>
+                  <span className="picker-ws-count">{wsBoards.filter((b) => draft.has(b.id)).length}/{wsBoards.length}</span>
+                </div>
+                {wsBoards.map((b) => (
+                  <label key={b.id} className="picker-board-row">
+                    <input type="checkbox" checked={draft.has(b.id)} onChange={() => toggle(b.id)} />
+                    <span className="picker-board-name">{b.name}</span>
+                  </label>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+        <div className="picker-footer">
+          <span className="picker-count">{draft.size} board{draft.size !== 1 ? "s" : ""} selected</span>
+          <button className="panel-open-btn" onClick={() => onApply(draft)} disabled={draft.size === 0}>
+            Apply & Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [boards, setBoards] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -215,13 +299,16 @@ export default function App() {
   const [expandedBoards, setExpandedBoards] = useState({});
   const [selectedTask, setSelectedTask] = useState(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
+  const [allBoards, setAllBoards] = useState([]);
+  const [selectedBoardIds, setSelectedBoardIds] = useState(loadSavedBoardIds);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (boardIds) => {
     setLoading(true);
     setError(null);
     setTasks([]);
@@ -229,9 +316,19 @@ export default function App() {
     try {
       setLoadingMsg("Fetching boards…");
       const bList = await fetchBoards();
-      setBoards(bList);
+      setAllBoards(bList);
+
+      // If no selection saved yet, default to all boards
+      const ids = boardIds && boardIds.size > 0 ? boardIds : new Set(bList.map((b) => b.id));
+      if (!boardIds || boardIds.size === 0) {
+        setSelectedBoardIds(ids);
+        localStorage.setItem("selectedBoardIds", JSON.stringify([...ids]));
+      }
+
+      const toScan = bList.filter((b) => ids.has(b.id));
+      setBoards(toScan);
+
       const allTasks = [];
-      const toScan = bList;
       for (let i = 0; i < toScan.length; i++) {
         const b = toScan[i];
         setLoadingMsg(`Scanning board ${i + 1} of ${toScan.length}: ${b.name.slice(0, 30)}…`);
@@ -248,7 +345,14 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const handleApplyPicker = (newIds) => {
+    setSelectedBoardIds(newIds);
+    localStorage.setItem("selectedBoardIds", JSON.stringify([...newIds]));
+    setShowPicker(false);
+    load(newIds);
+  };
+
+  useEffect(() => { load(selectedBoardIds); }, [load]);
 
   const statuses = ["all", ...Array.from(new Set(tasks.map((t) => t.status).filter(Boolean)))];
   const boardNames = ["all", ...Array.from(new Set(tasks.map((t) => t.boardTitle).filter(Boolean)))];
@@ -301,7 +405,10 @@ export default function App() {
             <button className="btn-icon" onClick={() => setDarkMode((d) => !d)} title="Toggle dark mode">
               {darkMode ? "☀" : "☾"}
             </button>
-            <button className="btn-refresh" onClick={load} disabled={loading}>
+            <button className="btn-refresh" onClick={() => setShowPicker(true)} disabled={loading} title="Select boards">
+              ⊞ Boards {selectedBoardIds.size > 0 ? `(${selectedBoardIds.size})` : ""}
+            </button>
+            <button className="btn-refresh" onClick={() => load(selectedBoardIds)} disabled={loading}>
               <span style={{ display: "inline-block", animation: loading ? "spin 0.8s linear infinite" : "none" }}>↺</span>
               {loading ? "Loading…" : "Refresh"}
             </button>
@@ -518,6 +625,15 @@ export default function App() {
       </div>
 
       <TaskDetailPanel task={selectedTask} onClose={() => setSelectedTask(null)} />
+
+      {showPicker && (
+        <BoardPicker
+          allBoards={allBoards}
+          selectedIds={selectedBoardIds}
+          onApply={handleApplyPicker}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
     </div>
   );
 }
